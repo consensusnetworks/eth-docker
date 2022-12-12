@@ -25,6 +25,10 @@ services:
     volumes:
       - prysmvalidator-data:/var/lib/prysm
       - /etc/localtime:/etc/localtime:ro
+    environment:
+      - MEV_BOOST=${MEV_BOOST}
+      - DOPPELGANGER=${DOPPELGANGER}
+      - VC_EXTRAS=${VC_EXTRAS:-}
     <<: *logging
     entrypoint:
       - docker-entrypoint-vc.sh

@@ -3,19 +3,22 @@
 # Prometheus config we need.
 # Expects a full prometheus command with parameters as argument(s)
 
-case "$CLIENT" in
-  *lighthouse-base* ) conffile=lh-prom.yml ;;
-  *lighthouse-cl-only* ) conffile=lhcc-prom.yml ;;
-  *prysm-base* ) conffile=prysm-prom.yml ;;
-  *prysm-consensus* ) conffile=prysmcc-prom.yml ;;
-  *nimbus-base* ) conffile=nimbus-prom.yml ;;
-  *nimbus-consensus* ) conffile=nimbus-prom.yml ;;
-  *teku-base* ) conffile=teku-prom.yml ;;
-  *teku-consensus* ) conffile=teku-prom.yml ;;
-  * ) conffile=none.yml ;;
-esac
+# Start fresh every time
+cp /etc/prometheus/global.yml /etc/prometheus/prometheus.yml
 
-cp /etc/prometheus/$conffile /etc/prometheus/prometheus.yml
+case "$CLIENT" in
+  *lighthouse.yml* )  cat /etc/prometheus/lh-prom.yml  >> /etc/prometheus/prometheus.yml;;
+  *lighthouse-cl-only* ) cat /etc/prometheus/lhcc-prom.yml >> /etc/prometheus/prometheus.yml;;
+  *prysm.yml* ) cat /etc/prometheus/prysm-prom.yml >> /etc/prometheus/prometheus.yml;;
+  *prysm-cl-only* ) cat /etc/prometheus/prysmcc-prom.yml >> /etc/prometheus/prometheus.yml;;
+  *nimbus.yml* ) cat /etc/prometheus/nimbus-prom.yml >> /etc/prometheus/prometheus.yml;;
+  *nimbus-cl-only* ) cat /etc/prometheus/nimbus-prom.yml >> /etc/prometheus/prometheus.yml;;
+  *teku.yml* ) cat /etc/prometheus/teku-prom.yml >> /etc/prometheus/prometheus.yml;;
+  *teku-cl-only* ) cat /etc/prometheus/teku-prom.yml >> /etc/prometheus/prometheus.yml;;
+  *lodestar.yml* ) cat /etc/prometheus/ls-prom.yml >> /etc/prometheus/prometheus.yml;;
+  *lodestar-cl-only* ) cat /etc/prometheus/lscc-prom.yml >> /etc/prometheus/prometheus.yml;;
+  * ) ;;
+esac
 
 case "$CLIENT" in
   *geth* ) cat /etc/prometheus/geth-prom.yml >> /etc/prometheus/prometheus.yml ;;
@@ -32,5 +35,9 @@ esac
 case "$CLIENT" in
   *traefik-* ) cat /etc/prometheus/traefik-prom.yml >> /etc/prometheus/prometheus.yml;;
 esac
+
+if [ -f "/etc/prometheus/custom-prom.yml" ]; then
+    cat /etc/prometheus/custom-prom.yml >> /etc/prometheus/prometheus.yml
+fi
 
 exec "$@" --config.file=/etc/prometheus/prometheus.yml
