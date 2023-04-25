@@ -49,13 +49,32 @@ case ${LOG_LEVEL} in
     ;;
 esac
 
+if [ "${ARCHIVE_NODE}" = "true" ]; then
+  echo "Geth archive node without pruning"
+  __prune="--gcmode=archive"
+else
+  __prune=""
+fi
+
+# Detect existing DB; use Pebble if fresh
+if [ -d "/var/lib/goethereum/geth/chaindata/" ]; then
+  __pebbleme=""
+else
+  echo "Choosing Pebble DB for fresh sync"
+  __pebbleme="--db.engine=pebble"
+fi
+
 if [ -f /var/lib/goethereum/prune-marker ]; then
   rm -f /var/lib/goethereum/prune-marker
+  if [ "${ARCHIVE_NODE}" = "true" ]; then
+    echo "Geth is an archive node. Not attempting to prune: Aborting."
+    exit 1
+  fi
 # Word splitting is desired for the command line parameters
 # shellcheck disable=SC2086
   exec "$@" ${EL_EXTRAS} snapshot prune-state
 else
 # Word splitting is desired for the command line parameters
 # shellcheck disable=SC2086
-  exec "$@" ${__verbosity} ${EL_EXTRAS}
+  exec "$@" ${__prune} ${__pebbleme} ${__verbosity} ${EL_EXTRAS}
 fi

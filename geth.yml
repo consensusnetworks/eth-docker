@@ -16,20 +16,21 @@ services:
       args:
         - BUILD_TARGET=${GETH_SRC_BUILD_TARGET}
         - DOCKER_TAG=${GETH_DOCKER_TAG}
-    stop_grace_period: 3m
+    stop_grace_period: 5m
     image: geth:local
     user: geth
     environment:
-      - JWT_SECRET=${JWT_SECRET}
-      - LOG_LEVEL=${LOG_LEVEL}
+      - JWT_SECRET=${JWT_SECRET:-}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
       - EL_EXTRAS=${EL_EXTRAS:-}
+      - ARCHIVE_NODE=${ARCHIVE_NODE:-}
     volumes:
       - geth-eth1-data:/var/lib/goethereum
       - /etc/localtime:/etc/localtime:ro
       - jwtsecret:/var/lib/goethereum/ee-secret
     ports:
-      - ${HOST_IP:-0.0.0.0}:${EL_P2P_PORT:-30303}:${EL_P2P_PORT:-30303}/tcp
-      - ${HOST_IP:-0.0.0.0}:${EL_P2P_PORT:-30303}:${EL_P2P_PORT:-30303}/udp
+      - ${HOST_IP:-}${EL_P2P_PORT:-30303}:${EL_P2P_PORT:-30303}/tcp
+      - ${HOST_IP:-}${EL_P2P_PORT:-30303}:${EL_P2P_PORT:-30303}/udp
     networks:
       default:
         aliases:
@@ -58,6 +59,7 @@ services:
       - ${EL_WS_PORT:-8546}
       - --ws.api
       - web3,eth,net
+      - --ws.origins=*
       - --${NETWORK}
       - --metrics
       - --metrics.expensive

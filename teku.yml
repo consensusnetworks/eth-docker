@@ -7,15 +7,18 @@ x-logging: &logging
       max-file: "3"
       tag: '{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}'
 
+x-build: &teku-build
+  context: ./teku
+  dockerfile: ${TEKU_DOCKERFILE}
+  args:
+    - BUILD_TARGET=${TEKU_SRC_BUILD_TARGET}
+    - DOCKER_TAG=${TEKU_DOCKER_TAG}
+
 services:
   consensus:
     restart: "unless-stopped"
     build:
-      context: ./teku
-      args:
-        - BUILD_TARGET=${TEKU_SRC_BUILD_TARGET}
-        - DOCKER_TAG=${TEKU_DOCKER_TAG}
-      dockerfile: ${TEKU_DOCKERFILE}
+      <<: *teku-build
     image: teku:local
     user: teku
     stop_grace_period: 1m
@@ -24,7 +27,7 @@ services:
       - /etc/localtime:/etc/localtime:ro
       - jwtsecret:/var/lib/teku/ee-secret
     environment:
-      - JAVA_OPTS=${TEKU_HEAP:--XX:SoftMaxHeapSize=2g -Xmx5g}
+      - JAVA_OPTS=${TEKU_HEAP:--Xmx5g}
       - RAPID_SYNC_URL=${RAPID_SYNC_URL}
       - JWT_SECRET=${JWT_SECRET}
       - MEV_BOOST=${MEV_BOOST}
@@ -33,9 +36,13 @@ services:
       - BEACON_STATS_MACHINE=${BEACON_STATS_MACHINE}
       - CL_EXTRAS=${CL_EXTRAS:-}
       - VC_EXTRAS=${VC_EXTRAS:-}
+      - ARCHIVE_NODE=${ARCHIVE_NODE:-}
+      - DOPPELGANGER=${DOPPELGANGER:-}
+      - GRAFFITI=${GRAFFITI:-}
+      - DEFAULT_GRAFFITI=${DEFAULT_GRAFFITI:-false}
     ports:
-      - ${HOST_IP:-0.0.0.0}:${CL_P2P_PORT:-9000}:${CL_P2P_PORT:-9000}/tcp
-      - ${HOST_IP:-0.0.0.0}:${CL_P2P_PORT:-9000}:${CL_P2P_PORT:-9000}/udp
+      - ${HOST_IP:-}${CL_P2P_PORT:-9000}:${CL_P2P_PORT:-9000}/tcp
+      - ${HOST_IP:-}${CL_P2P_PORT:-9000}:${CL_P2P_PORT:-9000}/udp
     networks:
       default:
         aliases:
@@ -55,12 +62,12 @@ services:
       - --p2p-peer-upper-bound=${CL_MAX_PEER_COUNT:-100}
       - --p2p-peer-lower-bound=${CL_MIN_PEER_COUNT:-64}
       - --validator-keys=/var/lib/teku/validator-keys:/var/lib/teku/validator-passwords
-      - --validators-graffiti=${GRAFFITI}
       - --logging=${LOG_LEVEL}
       - --rest-api-host-allowlist=*
       - --rest-api-enabled=true
       - --rest-api-interface=0.0.0.0
       - --rest-api-port=${CL_REST_PORT:-5052}
+      - --beacon-liveness-tracking-enabled=true
       - --metrics-enabled=true
       - --metrics-port=8008
       - --metrics-interface=0.0.0.0
@@ -75,22 +82,24 @@ services:
       - --validators-proposer-default-fee-recipient=${FEE_RECIPIENT}
       - --validators-keystore-locking-enabled=false
 
-  validator-import:
+  wipe-db:
     profiles: ["tools"]
     restart: "no"
-    image: teku:local
-    user: root
+    image: alpine:latest
+    user: "10002"
     volumes:
       - teku-data:/var/lib/teku
-      - ./.eth/validator_keys:/validator_keys
       - /etc/localtime:/etc/localtime:ro
-    environment:
-      - KEYSTORE_PASSWORD=${KEYSTORE_PASSWORD:-}
-    entrypoint: validator-import.sh
+    entrypoint: ["/bin/sh","-c"]
+    command:
+      - |
+        rm -rf /var/lib/teku/beacon/*
 
   validator-exit:
     profiles: ["tools"]
     restart: "no"
+    build:
+      <<: *teku-build
     image: teku:local
     user: teku
     volumes:

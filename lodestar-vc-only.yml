@@ -7,15 +7,28 @@ x-logging: &logging
       max-file: "3"
       tag: '{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}'
 
+x-build: &ls-build
+  context: ./lodestar
+  dockerfile: ${LS_DOCKERFILE}
+  args:
+    - BUILD_TARGET=${LS_SRC_BUILD_TARGET}
+    - DOCKER_TAG=${LS_DOCKER_TAG}
+
 services:
   validator:
     restart: "unless-stopped"
+    build:
+      <<: *ls-build
     image: lodestar:local
     user: lsvalidator
     environment:
       - MEV_BOOST=${MEV_BOOST}
+      - BEACON_STATS_API=${BEACON_STATS_API}
+      - BEACON_STATS_MACHINE=${BEACON_STATS_MACHINE}
       - DOPPELGANGER=${DOPPELGANGER}
       - VC_EXTRAS=${VC_EXTRAS:-}
+      - GRAFFITI=${GRAFFITI:-}
+      - DEFAULT_GRAFFITI=${DEFAULT_GRAFFITI:-false}
     volumes:
       - lsvalidator-data:/var/lib/lodestar/validators
       - /etc/localtime:/etc/localtime:ro
@@ -28,7 +41,7 @@ services:
       - validator
       - --dataDir
       - /var/lib/lodestar/validators
-      - --server
+      - --beaconNodes
       - ${CL_NODE:-http://consensus:5052}
       - --keymanager
       - --keymanager.address
@@ -41,8 +54,6 @@ services:
       - "8009"
       - --metrics.address
       - 0.0.0.0
-      - --graffiti
-      - ${GRAFFITI}
       - --logLevel
       - ${LOG_LEVEL}
       - --network
@@ -50,36 +61,11 @@ services:
       - --suggestedFeeRecipient
       - ${FEE_RECIPIENT}
 
-  validator-import:
-    profiles: ["tools"]
-    restart: "unless-stopped"
-    image: lodestar:local
-    user: root
-    volumes:
-      - lsvalidator-data:/var/lib/lodestar/validators
-      - ./.eth/validator_keys:/validator_keys
-      - /etc/localtime:/etc/localtime:ro
-    environment:
-      - KEYSTORE_PASSWORD=${KEYSTORE_PASSWORD:-}
-      - NETWORK=${NETWORK}
-      - CL_NODE=${CL_NODE:-http://consensus:5052}
-    entrypoint:
-      - validator-import.sh
-      - node
-      - --max-old-space-size=4096
-      - /usr/app/node_modules/.bin/lodestar
-      - validator
-      - import
-      - --dataDir
-      - /var/lib/lodestar/validators
-      - --importKeystores
-      - /val_keys
-      - --network
-      - ${NETWORK}
-
   validator-exit:
     profiles: ["tools"]
     restart: "no"
+    build:
+      <<: *ls-build
     image: lodestar:local
     user: lsvalidator
     volumes:

@@ -1,8 +1,10 @@
-FROM prom/prometheus
+FROM prom/prometheus:latest
 
 COPY ./*-prom.yml /etc/prometheus/
 COPY ./global.yml /etc/prometheus
-COPY ./choose-config.sh /usr/local/bin/choose-config.sh
+COPY --chown=nobody:nobody ./choose-config.sh /usr/local/bin/choose-config.sh
+# Belt and suspenders
+RUN chmod -R 755 /usr/local/bin/*
 USER root
 RUN chown nobody:nobody /etc/prometheus/*.yml
 USER nobody

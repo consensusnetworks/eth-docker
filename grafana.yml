@@ -42,7 +42,7 @@ services:
     <<: *logging
 
   node-exporter:
-    image: quay.io/prometheus/node-exporter:latest
+    image: prom/node-exporter:latest
     command:
       - '--path.rootfs=/host'
       - '--path.procfs=/host/proc'
@@ -72,7 +72,7 @@ services:
 
   json-exporter:
     restart: "unless-stopped"
-    image: quay.io/prometheuscommunity/json-exporter
+    image: prometheuscommunity/json-exporter:latest
     volumes:
       - ./prometheus/json.yml:/config/json.yml
       - /etc/localtime:/etc/localtime:ro
@@ -136,6 +136,8 @@ services:
     build:
       context: ./grafana
     image: grafana:local
+    # Defaults to root user. The script adjusts permissions and switches to grafana user since 12/26/2022
+    # This can be changed after a must-have update has been deployed by most (all?) users - possibly late 2023.
     environment:
       - GF_SERVER_HTTP_PORT=${GRAFANA_PORT}
       - CLIENT=${COMPOSE_FILE}

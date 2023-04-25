@@ -31,14 +31,27 @@ else
   __mev_boost=""
 fi
 
+# Check whether we should send stats to beaconcha.in
+if [ -n "${BEACON_STATS_API}" ]; then
+  __beacon_stats="--monitoring.endpoint https://beaconcha.in/api/v1/client/metrics?apikey=${BEACON_STATS_API}&machine=${BEACON_STATS_MACHINE}"
+  echo "Beacon stats API enabled"
+else
+  __beacon_stats=""
+fi
+
 # Check whether we should rapid sync
 if [ -n "${RAPID_SYNC_URL}" ]; then
-  __rapid_sync="--checkpointSyncUrl=${RAPID_SYNC_URL}"
-  echo "Checkpoint sync enabled"
+  if [ "${ARCHIVE_NODE}" = "true" ]; then
+    echo "Lodestar archive node cannot use checkpoint sync: Syncing from genesis."
+    __rapid_sync=""
+  else
+    __rapid_sync="--checkpointSyncUrl=${RAPID_SYNC_URL}"
+    echo "Checkpoint sync enabled"
+  fi
 else
   __rapid_sync=""
 fi
 
 # Word splitting is desired for the command line parameters
 # shellcheck disable=SC2086
-exec "$@" ${__mev_boost} ${__rapid_sync} ${CL_EXTRAS}
+exec "$@" ${__mev_boost} ${__beacon_stats} ${__rapid_sync} ${CL_EXTRAS}

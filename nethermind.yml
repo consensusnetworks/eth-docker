@@ -10,7 +10,7 @@ x-logging: &logging
 services:
   execution:
     restart: "unless-stopped"
-    stop_grace_period: 3m
+    stop_grace_period: 5m
     stop_signal: SIGINT
     build:
       context: ./nethermind
@@ -23,13 +23,15 @@ services:
     environment:
       - JWT_SECRET=${JWT_SECRET}
       - EL_EXTRAS=${EL_EXTRAS:-}
+      - ARCHIVE_NODE=${ARCHIVE_NODE:-}
+      - AUTOPRUNE_NM=${AUTOPRUNE_NM:-true}
     volumes:
       - nm-eth1-data:/var/lib/nethermind
       - /etc/localtime:/etc/localtime:ro
       - jwtsecret:/var/lib/nethermind/ee-secret
     ports:
-      - ${HOST_IP:-0.0.0.0}:${EL_P2P_PORT:-30303}:${EL_P2P_PORT:-30303}/tcp
-      - ${HOST_IP:-0.0.0.0}:${EL_P2P_PORT:-30303}:${EL_P2P_PORT:-30303}/udp
+      - ${HOST_IP:-}${EL_P2P_PORT:-30303}:${EL_P2P_PORT:-30303}/tcp
+      - ${HOST_IP:-}${EL_P2P_PORT:-30303}:${EL_P2P_PORT:-30303}/udp
     networks:
       default:
         aliases:
@@ -69,22 +71,23 @@ services:
       - "Web3,Eth,Subscribe,Net,Health,Parity,Proof,Trace,TxPool"
       - --JsonRpc.AdditionalRpcUrls=http://127.0.0.1:1337|http|admin
       - --JsonRpc.JwtSecretFile=/var/lib/nethermind/ee-secret/jwtsecret
+# Temporary Prysm workaround. Remove when no longer needed
+      - --JsonRpc.MaxBatchSize
+      - "10000"
       - --Metrics.Enabled
       - "true"
+      - --Metrics.PushGatewayUrl
+      - ""
       - --Metrics.ExposePort
       - "6060"
-      - --Metrics.IntervalSeconds
-      - "999999"
       - --config
       - ${NETWORK}
       - --Sync.AncientBodiesBarrier
       - "1"
       - --Sync.AncientReceiptsBarrier
       - "1"
-      - --Pruning.FullPruningMaxDegreeOfParallelism
-      - "2"
       - --Pruning.FullPruningCompletionBehavior
-      - ShutdownOnSuccess
+      - AlwaysShutdown
       - --log
       - ${LOG_LEVEL}
 volumes:
